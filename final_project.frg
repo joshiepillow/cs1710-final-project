@@ -37,3 +37,11 @@ pred init {
 }
 
 run { init } for exactly 4 Person, exactly 8 List
+
+// is_stable_match
+
+// is_symmetric
+
+// everyone_is_matched
+
+// find the conditions for stable roommates with 3 people
