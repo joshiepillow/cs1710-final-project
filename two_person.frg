@@ -95,4 +95,26 @@ run {
 } for exactly 4 Person, exactly 8 List, exactly 1 Match
 
 
+fun rankOf[p: Person, m: Match]: Int {
+  let head = GroupA.priorities[p] + GroupB.priorities[p],
+      target = m.pair[p] |
+  #({ l: List | l in head.^next and l.person = target })
+}
+
+fun totalDissatisfaction[m: Match]: Int {
+  sum p: Person | rankOf[p, m]
+}
+
+pred fairer[m1, m2: Match] {
+  totalDissatisfaction[m1] < totalDissatisfaction[m2]
+}
+
+run {
+    init
+    some m1, m2: Match |
+        valid_match[m1] and valid_match[m2] and
+        fairer[m1, m2]
+} for exactly 4 Person, exactly 8 List, 2 Match
+
+
 // find the conditions for stable roommates with 3 people
