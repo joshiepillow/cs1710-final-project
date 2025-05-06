@@ -118,6 +118,3 @@ run {
         valid_match[m1] and valid_match[m2] and
         fairer[m1, m2]
 } for exactly 4 Person, exactly 8 List, 2 Match
-
-
-// find the conditions for stable roommates with 3 people
