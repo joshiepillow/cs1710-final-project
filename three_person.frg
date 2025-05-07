@@ -22,17 +22,21 @@ sig Match {
     n_mates: set Person -> Roommates
 }
 
-one sig GroupAll extends Group{}
+one sig Female extends Group{}
+one sig Male extends Group {}
 
 pred init {
-    Person in GroupAll.priorities.List // Every person is in GroupAll
+    Person in Female.priorities.List + Male.priorities.List // Every person is in Female or in Male
+    no Female.priorities.List & Male.priorities.List // No one is in Female in Male
+    #{Female.priorities} = #{Male.priorities} // Same size
     all p: Person {
         // Only one ranking per person
-        lone (p -> List) & GroupAll.priorities
+        lone (p -> List) & Female.priorities
+        lone (p -> List) & Male.priorities
 
         // Every member ranks all other members
-        (GroupAll.priorities[p]).*next.person = GroupAll.priorities.List
-        (GroupAll.priorities[p]).*next.person != p
+        p in Female.priorities.List implies (Female.priorities[p]).*next.person = Male.priorities.List
+        p in Male.priorities.List implies (Male.priorities[p]).*next.person = Female.priorities.List
     }
     all l: List {
         l.person not in l.^next.person // No ranking includes the same person twice
@@ -60,21 +64,27 @@ pred valid_match[m: Match] {
 
     // Everyone is matched to exactly two people
     all p: Person | let n = 2 | (#{p1: Person | p1 in (m.n_mates[p]).others} = n)
+
+    // All roommates must be from the same group
+    all p: Person | 
+        (p in Female.priorities.List implies (m.n_mates[p]).others in Female.priorities.List) and
+        (p in Male.priorities.List implies (m.n_mates[p]).others in Male.priorities.List)
+
 }
 
 run {
     init
     some m: Match | valid_match[m]
-} for exactly 6 Person, exactly 6 List, exactly 6 Roommates, exactly 1 Match
+} for exactly 9 Person, exactly 9 List, exactly 9 Roommates, exactly 1 Match
 
 pred stable_match[m: Match] {
   valid_match[m]
 
   no a, b: Person |
-    let aList = GroupAll.priorities[a] |
-    let bList = GroupAll.priorities[b] |
-    let aMatch = m.n_mates[a] |
-    let bMatch = m.n_mates[b] |
+    let aList = Female.priorities[a] |
+    let bList = Male.priorities[b] |
+    let aMatch = m.n_mates[a].others |
+    let bMatch = m.n_mates[b].others |
     let aNext = ^next[aList] |
     let bNext = ^next[bList] |
     b not in aMatch and

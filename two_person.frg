@@ -1,4 +1,5 @@
 #lang forge/temporal
+option run_sterling "tp_visualizer.js"
 
 option max_tracelength 12
 option min_tracelength 12
@@ -64,6 +65,8 @@ pred valid_match[m: Match] {
         let p2 = m.pair[p1] |
             (p1 in GroupA.priorities.List and p2 in GroupB.priorities.List) or
             (p1 in GroupB.priorities.List and p2 in GroupA.priorities.List)
+
+     all l: List | some l.person
 }
 
 
