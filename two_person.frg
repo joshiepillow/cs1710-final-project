@@ -97,10 +97,10 @@ pred stable_match[m: Match] {
     }
 }
 
-run {
+StableMatch: run {
     init
     some m: Match | stable_match[m]
-} for exactly 6 Person, exactly 8 List, 1 Match
+} for exactly 4 Person, exactly 8 List, 1 Match
 
 fun rankOf[p: Person, m: Match]: Int {
   let head = Mentor.priorities[p] + Mentee.priorities[p],
@@ -116,6 +116,36 @@ fun groupCost[G: Group, m: Match]: Int {
     sum p: G.priorities.List | rankOf[p, m]
 }
 
+pred isEgalitarian[m: Match] {
+    let scores = { s: Int | all x: Match | s = totalCost[x]} |
+    totalCost[m] = min[scores]
+}
+
+pred isGroupEqual[m: Match]{
+  let scores = { s: Int | all x: Match | s = abs[groupCost[Mentor, x] - groupCost[Mentee, x]]} |
+    abs[groupCost[Mentor, m] - groupCost[Mentee, m]] = min[scores]
+}
+
+Egalitarian: run {
+    init
+    all x: Match | valid_match[x] and stable_match[x] 
+    some m: Match | isEgalitarian[m]
+} for exactly 6 Person, 12 List, 4 Match
+
+
+GroupEqual: run {
+    init
+    all x: Match | valid_match[x] and stable_match[x] 
+    some m: Match | isGroupEqual[m]
+} for exactly 6 Person, 12 List, 4 Match
+
+EgalitarianAndGroupEqual: run {
+    init
+    all x: Match | valid_match[x] and stable_match[x] 
+    some m: Match | isGroupEqual[m] and isEgalitarian[m]
+} for exactly 6 Person, 12 List, 4 Match
+
+/*
 // Minimising the sum of total cost
 pred egalitarian[m1, m2: Match] {
     totalCost[m1] <= totalCost[m2]
@@ -127,6 +157,14 @@ pred groupEqual[m1, m2: Match] {
     abs[groupCost[Mentor, m2] - groupCost[Mentee, m2]]
 }
 
+StableMatchAndGroupEqual: run {
+    init
+    some disj m1, m2: Match | 
+        stable_match[m1] and stable_match[m2] and
+        groupEqual[m1, m2]
+} for exactly 6 Person, exactly 12 List, 2 Match
+
+
 // Minimize the maximum total cost of any group
 pred balanced[m1, m2: Match] {
     let m1GroupCosts = { groupCost[Mentor, m1] + groupCost[Mentee, m1] } |
@@ -136,7 +174,7 @@ pred balanced[m1, m2: Match] {
 
 // Return the maximum individual regret (i.e. worst-case rank) among members of group G in matching m.
 fun groupDegree[G: Group, m: Match]: Int {
-    let rs = { r: Int | some p: G.priorities.List | r = rankOf[p, m] } |
+    let rs = { r: Int | all p: G.priorities.List | r = rankOf[p, m] } |
     max[rs]
 }
 
@@ -156,45 +194,4 @@ pred regretEqual[m1, m2: Match] {
 pred minRegret[m1, m2: Match] {
   maxDegree[m1] <= maxDegree[m2]
 }
-
-
-EgalitarianNotGroupEqual: run {
-    init
-    some m1, m2: Match |
-        valid_match[m1] and valid_match[m2] and
-        egalitarian[m1, m2] and not groupEqual[m1, m2]
-} for exactly 6 Person, exactly 10 List, 2 Match
-
-NotEgalitarianButGroupEqual: run {
-    init
-    some m1, m2: Match |
-        valid_match[m1] and valid_match[m2] and
-        groupEqual[m1, m2] and not egalitarian[m1, m2]
-} for exactly 6 Person, exactly 10 List, 2 Match
-
-NotBalancedButRegretEqual: run {
-    init
-    some m1, m2: Match |
-        valid_match[m1] and valid_match[m2] and
-        regretEqual[m1, m2] and not balanced[m1, m2]
-} for exactly 6 Person, exactly 10 List, 2 Match
-
-onlyEgalitarian: run {
-    init
-    some m1, m2: Match |
-        valid_match[m1] and valid_match[m2] and
-        egalitarian[m1, m2] and
-        not groupEqual[m1, m2] and
-        not balanced[m1, m2] and
-        not regretEqual[m1, m2]
-} for exactly 6 Person, exactly 10 List, 2 Match
-
-onlyRegretEqual: run {
-    init
-    some m1, m2: Match |
-        valid_match[m1] and valid_match[m2] and
-        not egalitarian[m1, m2] and
-        not groupEqual[m1, m2] and
-        not balanced[m1, m2] and
-        regretEqual[m1, m2]
-} for exactly 6 Person, exactly 10 List, 2 Match
+*/

@@ -78,7 +78,7 @@ for (const [personId, headId] of personToHead.entries()) {
   const missing = allPeople.filter(
     (p) => p !== personId && !preferences.includes(p)
   );
-  if (missing.length === 1) preferences.push(missing[0]);
+  // if (missing.length === 1) preferences.push(missing[0]);
 
   const x = START_X + col * (CELL_WIDTH + BOX_PADDING);
   const boxHeight = (preferences.length + 1) * CELL_HEIGHT + BOX_PADDING;

@@ -199,9 +199,9 @@ Each instance consists of:
 - Each person has a linked list of preferences over the opposite group.
 - A `Match` assigning every person to a unique partner from the other group.
 
-The **custom visualization**:
+The custom visualization:
 
 - Shows each person's preferences top-to-bottom in colored boxes.
 - Highlights their actual match in a darker background.
 - Draws matched pairs as colored circles below, showing group membership and partner connection.
-- Displays **fairness metrics** in a nea
+- Displays fairness metrics
