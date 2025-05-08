@@ -104,3 +104,33 @@ run {
     init
     some m: Match | stable_match[m]
 } for exactly 6 Person, exactly 6 List, exactly 6 Roommates, exactly 1 Match
+
+// pred contains_gadget[m: Match] {
+//     some disj a,b,c,e: Person | {
+//         (Male[a].person = b
+//         Male[a].next.person = c
+//         Male[a].next.next.person = e
+//         Male[b].person = c
+//         Male[b].next.person = e
+//         Male[b].next.next.person = a
+//         Male[c].person = e
+//         Male[c].next.person = a
+//         Male[c].next.next.person = b
+//         Male[e].person = a
+//         Male[e].next.person = b
+//         Male[e].^next.person = c)
+//         or 
+//         (Female[a].person = b
+//         Female[a].next.person = c
+//         Female[a].next.next.person = e
+//         Female[b].person = c
+//         Female[b].next.person = e
+//         Female[b].next.next.person = a
+//         Female[c].person = e
+//         Female[c].next.person = a
+//         Female[c].next.next.person = b
+//         Female[e].person = a
+//         Female[e].next.person = b
+//         Female[e].^next.person = c)
+//     }
+// }
