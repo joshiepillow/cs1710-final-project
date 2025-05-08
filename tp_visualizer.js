@@ -5,7 +5,7 @@ const TITLE_Y_OFFSET = 40;
 const START_X = 50;
 const BOX_PADDING = 10;
 const BOX_BORDER = 2;
-const circleRadius = 30;
+const circleRadius = 45;
 const groupColors = {
   GroupA: "#FFB6C1", // pink
   GroupB: "#B0E0E6", // blue
@@ -174,7 +174,9 @@ const seen = new Set();
 for (const [p1, p2] of matchMap.entries()) {
   if (seen.has(p1) || seen.has(p2)) continue;
 
-  const baseX = START_X + pairIndex * (CELL_WIDTH + BOX_PADDING);
+  const pairSpacing = 250; // or 300 for very large spacing
+  const baseX = START_X + pairIndex * pairSpacing;
+  //   const baseX = START_X + pairIndex * (CELL_WIDTH + BOX_PADDING);
   const cx1 = baseX + CELL_WIDTH / 4;
   const cx2 = baseX + (3 * CELL_WIDTH) / 4;
   const cy = shapeStartY;
@@ -266,3 +268,115 @@ drawLegendItem(START_X + 100, legendY, groupColors.GroupB, "GroupB");
 // === Final: Set SVG size
 svg.setAttribute("width", START_X + col * (CELL_WIDTH + BOX_PADDING));
 svg.setAttribute("height", legendY + 60);
+
+// === Step 7: Display Fairness Metrics ===
+
+function computeRank(p, q) {
+  const headId = personToHead.get(p);
+  if (!headId) return null;
+  const prefs = getPreferenceChainFromListId(headId);
+  return prefs.indexOf(q); // 0-based rank = regret
+}
+
+function computeGroupDegree(groupName) {
+  return Math.max(
+    ...allPeople
+      .filter((p) => personToGroup.get(p) === groupName)
+      .map((p) => computeRank(p, matchMap.get(p)))
+  );
+}
+
+function computeGroupCost(groupName) {
+  console.log(allPeople.filter((p) => personToGroup.get(p) === groupName));
+  return allPeople
+    .filter((p) => personToGroup.get(p) === groupName)
+    .reduce((acc, p) => acc + computeRank(p, matchMap.get(p)), 0);
+}
+
+const groupACost = computeGroupCost("GroupA0");
+const groupBCost = computeGroupCost("GroupB0");
+const groupADegree = computeGroupDegree("GroupA0");
+const groupBDegree = computeGroupDegree("GroupB0");
+
+const totalCost = groupACost + groupBCost;
+const maxGroupCost = Math.max(groupACost, groupBCost);
+const groupEqualScore = Math.abs(groupACost - groupBCost);
+const regretEqualScore = Math.abs(groupADegree - groupBDegree);
+const maxIndividualRegret = Math.max(groupADegree, groupBDegree);
+
+// === Step 7: Display Fairness Metrics (Prettier) ===
+const metricsY = legendY + 40;
+const metricBoxX = START_X;
+const metricBoxWidth = 300;
+const metricRowHeight = 24;
+const metricPadding = 10;
+
+const metrics = [
+  ["Total Cost", totalCost],
+  ["GroupA Cost", groupACost],
+  ["GroupB Cost", groupBCost],
+  ["Group Cost Difference (group-equal)", groupEqualScore],
+  ["Max Group Cost (balanced)", maxGroupCost],
+  ["Max Individual Regret (min-regret)", maxIndividualRegret],
+  ["Group Degree Difference (regret-equal)", regretEqualScore],
+];
+
+const boxHeight = metrics.length * metricRowHeight + metricPadding * 2;
+
+// Background box
+const metricsBox = document.createElementNS(
+  "http://www.w3.org/2000/svg",
+  "rect"
+);
+metricsBox.setAttribute("x", metricBoxX - 10);
+metricsBox.setAttribute("y", metricsY - 30);
+metricsBox.setAttribute("width", metricBoxWidth);
+metricsBox.setAttribute("height", boxHeight + 30);
+metricsBox.setAttribute("fill", "#f9f9f9");
+metricsBox.setAttribute("stroke", "#ccc");
+metricsBox.setAttribute("stroke-width", 1.5);
+metricsBox.setAttribute("rx", 8);
+metricsBox.setAttribute("ry", 8);
+svg.appendChild(metricsBox);
+
+// Header
+const metricsHeader = document.createElementNS(
+  "http://www.w3.org/2000/svg",
+  "text"
+);
+metricsHeader.setAttribute("x", metricBoxX);
+metricsHeader.setAttribute("y", metricsY - 10);
+metricsHeader.setAttribute("font-size", "14");
+metricsHeader.setAttribute("font-weight", "bold");
+metricsHeader.setAttribute("fill", "#333");
+metricsHeader.textContent = "Fairness Metrics:";
+svg.appendChild(metricsHeader);
+
+// Metric rows
+let currentY = metricsY + metricPadding;
+for (const [label, value] of metrics) {
+  const labelText = document.createElementNS(
+    "http://www.w3.org/2000/svg",
+    "text"
+  );
+  labelText.setAttribute("x", metricBoxX);
+  labelText.setAttribute("y", currentY);
+  labelText.setAttribute("font-size", "12");
+  labelText.setAttribute("fill", "#444");
+  labelText.textContent = `${label}:`;
+  svg.appendChild(labelText);
+
+  const valueText = document.createElementNS(
+    "http://www.w3.org/2000/svg",
+    "text"
+  );
+  valueText.setAttribute("x", metricBoxX + 250);
+  valueText.setAttribute("y", currentY);
+  valueText.setAttribute("font-size", "12");
+  valueText.setAttribute("fill", "#000");
+  valueText.setAttribute("font-weight", "bold");
+  valueText.textContent = `${value}`;
+  svg.appendChild(valueText);
+
+  currentY += metricRowHeight;
+}

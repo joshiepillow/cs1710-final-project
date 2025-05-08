@@ -77,6 +77,7 @@ run {
     some m: Match | valid_match[m]
 } for exactly 9 Person, exactly 9 List, exactly 9 Roommates, exactly 1 Match
 
+
 pred stable_match[m: Match] {
   valid_match[m]
 
