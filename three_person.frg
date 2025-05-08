@@ -83,8 +83,8 @@ pred stable_match[m: Match] {
   no a, b: Person |
     let aList = Female.priorities[a] |
     let bList = Male.priorities[b] |
-    let aMatch = m.n_mates[a].others |
-    let bMatch = m.n_mates[b].others |
+    let aMatch = (m.n_mates[a]).others |
+    let bMatch = (m.n_mates[b]).others |
     let aNext = ^next[aList] |
     let bNext = ^next[bList] |
     b not in aMatch and
