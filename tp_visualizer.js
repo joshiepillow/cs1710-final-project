@@ -4,11 +4,11 @@ const CELL_WIDTH = 150;
 const TITLE_Y_OFFSET = 40;
 const START_X = 50;
 const BOX_PADDING = 10;
-const BOX_BORDER = 2;
+const BOX_BORDER = 1.5;
 const circleRadius = 45;
 const groupColors = {
-  GroupA: "#FFB6C1", // pink
-  GroupB: "#B0E0E6", // blue
+  Mentor: "#FFB6C1", // pink
+  Mentee: "#B0E0E6", // blue
 };
 
 // === Step 1: Build mappings ===
@@ -66,7 +66,7 @@ function getPreferenceChainFromListId(headId) {
 
 function getGroupColor(personId) {
   const group = personToGroup.get(personId);
-  return group?.includes("GroupA") ? groupColors.GroupA : groupColors.GroupB;
+  return group?.includes("Mentor") ? groupColors.Mentor : groupColors.Mentee;
 }
 
 // === Step 4: Draw preference columns
@@ -78,7 +78,7 @@ for (const [personId, headId] of personToHead.entries()) {
   const missing = allPeople.filter(
     (p) => p !== personId && !preferences.includes(p)
   );
-  if (missing.length === 1) preferences.push(missing[0]);
+  // if (missing.length === 1) preferences.push(missing[0]);
 
   const x = START_X + col * (CELL_WIDTH + BOX_PADDING);
   const boxHeight = (preferences.length + 1) * CELL_HEIGHT + BOX_PADDING;
@@ -90,9 +90,12 @@ for (const [personId, headId] of personToHead.entries()) {
   rect.setAttribute("y", TITLE_Y_OFFSET - CELL_HEIGHT + 5);
   rect.setAttribute("width", CELL_WIDTH);
   rect.setAttribute("height", boxHeight);
-  rect.setAttribute("fill", "#f0f8ff");
-  rect.setAttribute("stroke", "#aaa");
+  // rect.setAttribute("fill", "#f0f8ff");
+  rect.setAttribute("stroke", "#ccc");
   rect.setAttribute("stroke-width", BOX_BORDER);
+  rect.setAttribute("rx", 8);
+  rect.setAttribute("ry", 8);
+  rect.setAttribute("fill", "#f9f9f9");
   svg.appendChild(rect);
 
   // Name
@@ -108,25 +111,40 @@ for (const [personId, headId] of personToHead.entries()) {
   nameText.setAttribute("font-weight", "bold");
   svg.appendChild(nameText);
 
+  function darken(hexColor, amount = 0.5) {
+    const num = parseInt(hexColor.replace("#", ""), 16);
+    let r = (num >> 16) & 0xff;
+    let g = (num >> 8) & 0xff;
+    let b = num & 0xff;
+
+    r = Math.floor(r * amount);
+    g = Math.floor(g * amount);
+    b = Math.floor(b * amount);
+
+    return `rgb(${r}, ${g}, ${b})`;
+  }
+
   // Preferences
   let y = TITLE_Y_OFFSET + CELL_HEIGHT;
   for (const [i, pref] of preferences.entries()) {
     const isMatch = matchMap.get(personId) === pref;
 
-    if (isMatch) {
-      const highlight = document.createElementNS(
-        "http://www.w3.org/2000/svg",
-        "rect"
-      );
-      highlight.setAttribute("x", x - 5);
-      highlight.setAttribute("y", y - 20);
-      highlight.setAttribute("width", CELL_WIDTH - 10);
-      highlight.setAttribute("height", 22);
-      highlight.setAttribute("fill", "#0066cc");
-      highlight.setAttribute("rx", 4);
-      highlight.setAttribute("ry", 4);
-      svg.appendChild(highlight);
-    }
+    // Background fill for each preference row
+    const prefBg = document.createElementNS(
+      "http://www.w3.org/2000/svg",
+      "rect"
+    );
+    prefBg.setAttribute("x", x - 5);
+    prefBg.setAttribute("y", y - 20);
+    prefBg.setAttribute("width", CELL_WIDTH - 10);
+    prefBg.setAttribute("height", 22);
+    prefBg.setAttribute("rx", 6);
+    prefBg.setAttribute("ry", 6);
+
+    // Set color based on group of the preferred person
+    const prefColor = getGroupColor(pref);
+    prefBg.setAttribute("fill", isMatch ? darken(prefColor, 0.6) : prefColor);
+    svg.appendChild(prefBg);
 
     const prefText = document.createElementNS(
       "http://www.w3.org/2000/svg",
@@ -161,7 +179,7 @@ const pairLabel = document.createElementNS(
   "text"
 );
 pairLabel.setAttribute("x", START_X);
-pairLabel.setAttribute("y", shapeStartY - 60);
+pairLabel.setAttribute("y", shapeStartY - 70);
 pairLabel.textContent = "Matched Pairs (Visual):";
 pairLabel.setAttribute("fill", "black");
 pairLabel.setAttribute("font-size", "16");
@@ -177,8 +195,8 @@ for (const [p1, p2] of matchMap.entries()) {
   const pairSpacing = 250; // or 300 for very large spacing
   const baseX = START_X + pairIndex * pairSpacing;
   //   const baseX = START_X + pairIndex * (CELL_WIDTH + BOX_PADDING);
-  const cx1 = baseX + CELL_WIDTH / 4;
-  const cx2 = baseX + (3 * CELL_WIDTH) / 4;
+  const cx1 = baseX + CELL_WIDTH / 5;
+  const cx2 = baseX + (4 * CELL_WIDTH) / 4;
   const cy = shapeStartY;
 
   // Connector line
@@ -205,7 +223,7 @@ for (const [p1, p2] of matchMap.entries()) {
     circle.setAttribute("r", circleRadius);
     circle.setAttribute("fill", getGroupColor(p));
     circle.setAttribute("stroke", "#003366");
-    circle.setAttribute("stroke-width", "2");
+    circle.setAttribute("stroke-width", "1.5");
     circle.setAttribute("filter", "url(#glow)");
     svg.appendChild(circle);
 
@@ -228,7 +246,7 @@ for (const [p1, p2] of matchMap.entries()) {
 }
 
 // === Step 6: Draw legend
-const legendY = shapeStartY + circleRadius * 2 + 20;
+const legendY = shapeStartY + circleRadius * 2 + 10;
 
 const legendTitle = document.createElementNS(
   "http://www.w3.org/2000/svg",
@@ -246,24 +264,24 @@ function drawLegendItem(x, y, color, label) {
     "http://www.w3.org/2000/svg",
     "circle"
   );
-  circle.setAttribute("cx", x);
-  circle.setAttribute("cy", y);
+  circle.setAttribute("cx", x + 8);
+  circle.setAttribute("cy", y + 5);
   circle.setAttribute("r", 8);
   circle.setAttribute("fill", color);
   circle.setAttribute("stroke", "#333");
   svg.appendChild(circle);
 
   const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-  text.setAttribute("x", x + 15);
-  text.setAttribute("y", y + 4);
+  text.setAttribute("x", x + 25);
+  text.setAttribute("y", y + 9);
   text.textContent = label;
   text.setAttribute("font-size", "12");
   text.setAttribute("fill", "#000");
   svg.appendChild(text);
 }
 
-drawLegendItem(START_X, legendY, groupColors.GroupA, "GroupA");
-drawLegendItem(START_X + 100, legendY, groupColors.GroupB, "GroupB");
+drawLegendItem(START_X, legendY, groupColors.Mentor, "Mentor");
+drawLegendItem(START_X + 100, legendY, groupColors.Mentee, "Mentee");
 
 // === Final: Set SVG size
 svg.setAttribute("width", START_X + col * (CELL_WIDTH + BOX_PADDING));
@@ -293,19 +311,19 @@ function computeGroupCost(groupName) {
     .reduce((acc, p) => acc + computeRank(p, matchMap.get(p)), 0);
 }
 
-const groupACost = computeGroupCost("GroupA0");
-const groupBCost = computeGroupCost("GroupB0");
-const groupADegree = computeGroupDegree("GroupA0");
-const groupBDegree = computeGroupDegree("GroupB0");
+const MentorCost = computeGroupCost("Mentor0");
+const MenteeCost = computeGroupCost("Mentee0");
+const MentorDegree = computeGroupDegree("Mentor0");
+const MenteeDegree = computeGroupDegree("Mentee0");
 
-const totalCost = groupACost + groupBCost;
-const maxGroupCost = Math.max(groupACost, groupBCost);
-const groupEqualScore = Math.abs(groupACost - groupBCost);
-const regretEqualScore = Math.abs(groupADegree - groupBDegree);
-const maxIndividualRegret = Math.max(groupADegree, groupBDegree);
+const totalCost = MentorCost + MenteeCost;
+const maxGroupCost = Math.max(MentorCost, MenteeCost);
+const groupEqualScore = Math.abs(MentorCost - MenteeCost);
+const regretEqualScore = Math.abs(MentorDegree - MenteeDegree);
+const maxIndividualRegret = Math.max(MentorDegree, MenteeDegree);
 
 // === Step 7: Display Fairness Metrics (Prettier) ===
-const metricsY = legendY + 40;
+const metricsY = legendY + 70;
 const metricBoxX = START_X;
 const metricBoxWidth = 300;
 const metricRowHeight = 24;
@@ -313,8 +331,8 @@ const metricPadding = 10;
 
 const metrics = [
   ["Total Cost", totalCost],
-  ["GroupA Cost", groupACost],
-  ["GroupB Cost", groupBCost],
+  ["Mentor Cost", MentorCost],
+  ["Mentee Cost", MenteeCost],
   ["Group Cost Difference (group-equal)", groupEqualScore],
   ["Max Group Cost (balanced)", maxGroupCost],
   ["Max Individual Regret (min-regret)", maxIndividualRegret],
@@ -332,9 +350,9 @@ metricsBox.setAttribute("x", metricBoxX - 10);
 metricsBox.setAttribute("y", metricsY - 30);
 metricsBox.setAttribute("width", metricBoxWidth);
 metricsBox.setAttribute("height", boxHeight + 30);
-metricsBox.setAttribute("fill", "#f9f9f9");
 metricsBox.setAttribute("stroke", "#ccc");
 metricsBox.setAttribute("stroke-width", 1.5);
+metricsBox.setAttribute("fill", "#f9f9f9");
 metricsBox.setAttribute("rx", 8);
 metricsBox.setAttribute("ry", 8);
 svg.appendChild(metricsBox);
@@ -345,15 +363,15 @@ const metricsHeader = document.createElementNS(
   "text"
 );
 metricsHeader.setAttribute("x", metricBoxX);
-metricsHeader.setAttribute("y", metricsY - 10);
-metricsHeader.setAttribute("font-size", "14");
+metricsHeader.setAttribute("y", metricsY - 5);
+metricsHeader.setAttribute("font-size", "16");
 metricsHeader.setAttribute("font-weight", "bold");
 metricsHeader.setAttribute("fill", "#333");
 metricsHeader.textContent = "Fairness Metrics:";
 svg.appendChild(metricsHeader);
 
 // Metric rows
-let currentY = metricsY + metricPadding;
+let currentY = metricsY + metricPadding + 15;
 for (const [label, value] of metrics) {
   const labelText = document.createElementNS(
     "http://www.w3.org/2000/svg",

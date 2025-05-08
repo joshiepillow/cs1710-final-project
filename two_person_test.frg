@@ -2,10 +2,52 @@
 
 open "two_person.frg"
 
+test suite for init {
+    // Symmetric difference of Mentors and Mentees is the set of all Persons
+    assert { 
+        Person = Mentor.priorities.List + Mentee.priorities.List - Mentor.priorities.List & Mentee.priorities.List 
+    } is necessary for init
+
+    // Equal number of Mentors and Mentees
+    assert {
+        #{Mentor.priorities.List} = #{Mentee.priorities.List}
+    } is necessary for init
+
+    // Every Mentor ranks every Mentee once
+    assert {
+        all m1: Mentor.priorities.List, m2: Mentee.priorities.List | {
+            one l: List | l in (Mentor.priorities[m1]).*next and l.person = m2
+        }
+    } is necessary for init
+    // and vice versa.
+    assert {
+        all m1: Mentee.priorities.List, m2: Mentor.priorities.List | {
+            one l: List | l in (Mentee.priorities[m1]).*next and l.person = m2
+        }
+    } is necessary for init
+
+    // Preference list length equals number of pairs
+    assert {
+        all p: Person | #{(Group.priorities[p]).*next} = #{Mentor.priorities.List}
+    } is necessary for init
+
+    // No one ranks their own group
+    assert {
+        all m1: Mentor.priorities.List, m2: Mentor.priorities.List | {
+            no l: List | l in (Mentor.priorities[m1]).*next and l.person = m2
+        }
+    } is necessary for init
+    assert {
+        all m1: Mentee.priorities.List, m2: Mentee.priorities.List | {
+            no l: List | l in (Mentee.priorities[m1]).*next and l.person = m2
+        }
+    } is necessary for init
+}
+
 pred match_to_different_group {
     all p: Person | { 
         some p1: Person, m: Match | { 
-            p in GroupA.priorities.List <=> p1 in GroupB.priorities.List
+            p in Mentor.priorities.List <=> p1 in Mentee.priorities.List
             m.pair[p] = p1
         }
     }
@@ -42,8 +84,8 @@ test suite for valid_match {
 
 pred both_unhappy {
     some a, b: Person, m: Match | {
-        let aList = GroupA.priorities[a] + GroupB.priorities[a] | 
-        let bList = GroupA.priorities[b] + GroupB.priorities[b] | 
+        let aList = Mentor.priorities[a] + Mentee.priorities[a] | 
+        let bList = Mentor.priorities[b] + Mentee.priorities[b] | 
         let aNext = ^next[aList] | 
         let bNext = ^next[bList] | 
         m.pair[a] != b and
@@ -76,8 +118,8 @@ test suite for stable_match {
         init
         some m: Match | {
             all p: Person |  { 
-                p in GroupA => ((GroupA.priorities[p]).person = m.pair[p]) 
-                p in GroupB => ((GroupB.priorities[p]).person = m.pair[p])
+                p in Mentor => ((Mentor.priorities[p]).person = m.pair[p]) 
+                p in Mentee => ((Mentee.priorities[p]).person = m.pair[p])
             } => stable_match[m] 
         }
     } is sat for exactly 4 Person, exactly 4 List, exactly 1 Match

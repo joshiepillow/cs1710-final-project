@@ -23,30 +23,51 @@ one sig Interval {
     var intervals: set Person -> Person
 }
 
-one sig GroupA extends Group {}
-one sig GroupB extends Group {}
+one sig Mentor extends Group {}
+one sig Mentee extends Group {}
 
 pred init {
-    Person in GroupA.priorities.List + GroupB.priorities.List // Every person is in either GroupA or GroupB
-    no GroupA.priorities.List & GroupB.priorities.List // No one is in GroupA in GroupB
-    #{GroupA.priorities} = #{GroupB.priorities} // Same size
+    Person in Mentor.priorities.List + Mentee.priorities.List // Every person is in either Mentor or Mentee
+    no Mentor.priorities.List & Mentee.priorities.List // No one is in Mentor in Mentee
+    #{Mentor.priorities} = #{Mentee.priorities} // Same size
     all p: Person {
         // Only one ranking per person
-        lone (p -> List) & GroupA.priorities
-        lone (p -> List) & GroupB.priorities
+        lone (p -> List) & Mentor.priorities
+        lone (p -> List) & Mentee.priorities
 
         // Every member of each group ranks all other members from the other group
-        p in GroupA.priorities.List implies (GroupA.priorities[p]).*next.person = GroupB.priorities.List
-        p in GroupB.priorities.List implies (GroupB.priorities[p]).*next.person = GroupA.priorities.List
+        p in Mentor.priorities.List implies (Mentor.priorities[p]).*next.person = Mentee.priorities.List
+        p in Mentee.priorities.List implies (Mentee.priorities[p]).*next.person = Mentor.priorities.List
     }
     all l: List {
         l.person not in l.^next.person // No ranking includes the same person twice
         l in Person.(Group.priorities).*next // No dangling irrelevant lists
     }
-    // Initially all members of GroupA are considered by all members of GroupB and vice versa
-    Interval.intervals = GroupA.priorities.List -> GroupB.priorities.List + GroupB.priorities.List -> GroupA.priorities.List
+    // Initially all members of Mentor are considered by all members of Mentee and vice versa
+    Interval.intervals = Mentor.priorities.List -> Mentee.priorities.List + Mentee.priorities.List -> Mentor.priorities.List
 }
 
+pred stable_match[m: Match] {
+  valid_match[m]
+
+  no a, b: Person |
+    let aList = Mentor.priorities[a] + Mentee.priorities[a] |
+    let bList = Mentor.priorities[b] + Mentee.priorities[b] |
+    let aMatch = m.pair[a] |
+    let bMatch = m.pair[b] |
+    let aNext = ^next[aList] |
+    let bNext = ^next[bList] |
+    aMatch != b and
+    a != b and 
+    {some l1, l2, l3, l4: List | 
+    l1 in aList.*next and l2 in aList.*next and
+    l1.person = b and l2.person = aMatch and
+    l2 in ^next[l1] and  // a prefers b over aMatch
+    l3 in bList.*next and l4 in bList.*next and
+    l3.person = a and l4.person = bMatch and
+    l4 in ^next[l3]  // b prefers a over bMatch
+    }
+}
 
 // Get the associated list for person q in p's priorities
 fun associatedList[p: Person, q: Person]: one List {
@@ -75,10 +96,7 @@ pred eventuallyConstant {
     eventually constant
 }
 
-// Check that algorithm always terminates eventually
-assert { init (always update) } is sufficient for eventuallyConstant
-
-// Using the algorithm's output, pick the GroupA or GroupB-optimal matching
+// Using the algorithm's output, pick the Mentor or Mentee-optimal matching
 pred groupOptimal[m: Match, group: Group] {
     let s = {p: group.priorities.List, q: Person | q in max[p, Interval.intervals[p]]} |
         always {constant implies {m.pair = s + ~s}}
@@ -87,8 +105,8 @@ pred groupOptimal[m: Match, group: Group] {
 run {
     init
     always update
-    some m: Match | groupOptimal[m, GroupA]
-} for exactly 4 Person, exactly 8 List, 1 Match
+    some m: Match | groupOptimal[m, Mentor]
+} for exactly 6 Person, exactly 18 List, 1 Match
 
 // Require no identical matchings. Necessary to force all matchings to exist
 pred noIdenticalMatchings {
@@ -96,7 +114,7 @@ pred noIdenticalMatchings {
 }
 
 fun rankOf[p: Person, m: Match]: Int {
-  let head = GroupA.priorities[p] + GroupB.priorities[p],
+  let head = Mentor.priorities[p] + Mentee.priorities[p],
       target = m.pair[p] |
   #({ l: List | l in head.^next and l.person = target })
 }
@@ -116,17 +134,17 @@ pred bestMatching[m: Match] {
     all other: Match | egalitarian[m, other]
 }
 
-// There are only 24 distinct matchings for 2 groups of 4 people
+// There are only 6 distinct matchings for 2 groups of 3 people
 assert {
     init
     {all m: Match | valid_match[m]}
     noIdenticalMatchings
-} is unsat for exactly 8 Person, exactly 32 List, exactly 25 Match
+} is unsat for exactly 8 Person, 8 List, exactly 25 Match
 assert {
     init
     {all m: Match | valid_match[m]}
     noIdenticalMatchings
-} is sat for exactly 8 Person, exactly 32 List, exactly 24 Match
+} is sat for exactly 8 Person, 8 List, exactly 24 Match
 
 // There exists a best matching
 pred existsBest {
@@ -147,8 +165,8 @@ pred valid_match[m: Match] {
     // No one is matched to someone in the same group
     all p1: Person | 
         let p2 = m.pair[p1] |
-            (p1 in GroupA.priorities.List and p2 in GroupB.priorities.List) or
-            (p1 in GroupB.priorities.List and p2 in GroupA.priorities.List)
+            (p1 in Mentor.priorities.List and p2 in Mentee.priorities.List) or
+            (p1 in Mentee.priorities.List and p2 in Mentor.priorities.List)
 
      all l: List | some l.person
 }
@@ -160,28 +178,28 @@ assert {
     noIdenticalMatchings
 } is sufficient for existsBest for exactly 4 Person, exactly 8 List, exactly 2 Match
 
-// Check that the best matching is necssarily stable
+// There exists a stable best matching
 assert {
     init 
     all m: Match | valid_match[m]
     noIdenticalMatchings
-    some m: Match | {bestMatching[m] and not stable_match[m]}
+    not (some m: Match | {bestMatching[m] and stable_match[m]})
 } is unsat for exactly 4 Person, exactly 8 List, exactly 2 Match
 
-// Check that the best matching is necessarily in the interval
+// There exists a best matching in the interval
 assert {
     init 
     always update
     all m: Match | valid_match[m]
     noIdenticalMatchings
-    some m: Match | {bestMatching[m] and m.pair not in Interval.intervals}
+    not (some m: Match | {bestMatching[m] and always m.pair in Interval.intervals})
 } is unsat for exactly 4 Person, exactly 8 List, exactly 2 Match
 
-// Check that the best matching is not always the GroupA or GroupB-optimal matching
+// Check that the best matching is not always the Mentor or Mentee-optimal matching
 assert {
     init 
     always update
     all m: Match | valid_match[m]
     noIdenticalMatchings
-    some m: Match | {bestMatching[m] and not groupOptimal[m, GroupA] and not groupOptimal[m, GroupB]}
+    some m: Match | {bestMatching[m] and not groupOptimal[m, Mentor] and not groupOptimal[m, Mentee]}
 } is sat for exactly 4 Person, exactly 8 List, exactly 2 Match
