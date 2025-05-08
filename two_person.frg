@@ -19,16 +19,12 @@ sig Match {
     pair: set Person -> Person
 }
 
-one sig Interval {
-    var intervals: set Person -> Person
-}
-
 one sig Mentor extends Group {}
 one sig Mentee extends Group {}
 
 pred init {
     Person in Mentor.priorities.List + Mentee.priorities.List // Every person is in either Mentor or Mentee
-    no Mentor.priorities.List & Mentee.priorities.List // No one is in Mentor in Mentee
+    no Mentor.priorities.List & Mentee.priorities.List // No one is in Mentor and Mentee
     #{Mentor.priorities} = #{Mentee.priorities} // Same size
     all p: Person {
         // Only one ranking per person
@@ -43,8 +39,6 @@ pred init {
         l.person not in l.^next.person // No ranking includes the same person twice
         l in Person.(Group.priorities).*next // No dangling irrelevant lists
     }
-    // Initially all members of Mentor are considered by all members of Mentee and vice versa
-    Interval.intervals = Mentor.priorities.List -> Mentee.priorities.List + Mentee.priorities.List -> Mentor.priorities.List
 }
 
 run { init } for exactly 4 Person, exactly 8 List
