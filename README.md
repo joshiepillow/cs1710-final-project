@@ -153,11 +153,11 @@ A temporal relation used by the interval-based algorithm to model evolving propo
 
 ### What tradeoffs did you make in choosing your representation? What else did you try that didn’t work as well?
 
-We chose a **linked list representation (`List`)** for preference rankings because it aligns naturally with Forge's structural constraints and enables easy reasoning over list traversal. While this is more verbose than an array-style or `seq`-based approach, it provided full control over the shape and consistency of preference lists, which was essential for enforcing uniqueness and completeness.
+<!-- We chose a **linked list representation (`List`)** for preference rankings because it aligns naturally with Forge's structural constraints and enables easy reasoning over list traversal. While this is more verbose than an array-style or `seq`-based approach, it provided full control over the shape and consistency of preference lists, which was essential for enforcing uniqueness and completeness. -->
 
-We originally considered modeling preferences as `Person -> Int` mappings, but that made it hard to enforce constraints like "no repeats" and list contiguity. We also experimented with modeling preferences via ordered sets, but Forge lacks native order types, making such attempts fragile.
+<!-- We originally considered modeling preferences as `Person -> Int` mappings, but that made it hard to enforce constraints like "no repeats" and list contiguity. We also experimented with modeling preferences via ordered sets, but Forge lacks native order types, making such attempts fragile.
 
-To keep matchings symmetric, we modeled them as `pair: set Person -> Person` and added constraints in `valid_match` to enforce bidirectionality. This avoids having to explicitly maintain inverse relations, but it means the model has to enforce mutuality manually.
+To keep matchings symmetric, we modeled them as `pair: set Person -> Person` and added constraints in `valid_match` to enforce bidirectionality. This avoids having to explicitly maintain inverse relations, but it means the model has to enforce mutuality manually. -->
 
 ---
 
