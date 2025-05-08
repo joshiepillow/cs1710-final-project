@@ -23,28 +23,28 @@ one sig Interval {
     var intervals: set Person -> Person
 }
 
-one sig GroupA extends Group {}
-one sig GroupB extends Group {}
+one sig Mentor extends Group {}
+one sig Mentee extends Group {}
 
 pred init {
-    Person in GroupA.priorities.List + GroupB.priorities.List // Every person is in either GroupA or GroupB
-    no GroupA.priorities.List & GroupB.priorities.List // No one is in GroupA in GroupB
-    #{GroupA.priorities} = #{GroupB.priorities} // Same size
+    Person in Mentor.priorities.List + Mentee.priorities.List // Every person is in either Mentor or Mentee
+    no Mentor.priorities.List & Mentee.priorities.List // No one is in Mentor in Mentee
+    #{Mentor.priorities} = #{Mentee.priorities} // Same size
     all p: Person {
         // Only one ranking per person
-        lone (p -> List) & GroupA.priorities
-        lone (p -> List) & GroupB.priorities
+        lone (p -> List) & Mentor.priorities
+        lone (p -> List) & Mentee.priorities
 
         // Every member of each group ranks all other members from the other group
-        p in GroupA.priorities.List implies (GroupA.priorities[p]).*next.person = GroupB.priorities.List
-        p in GroupB.priorities.List implies (GroupB.priorities[p]).*next.person = GroupA.priorities.List
+        p in Mentor.priorities.List implies (Mentor.priorities[p]).*next.person = Mentee.priorities.List
+        p in Mentee.priorities.List implies (Mentee.priorities[p]).*next.person = Mentor.priorities.List
     }
     all l: List {
         l.person not in l.^next.person // No ranking includes the same person twice
         l in Person.(Group.priorities).*next // No dangling irrelevant lists
     }
-    // Initially all members of GroupA are considered by all members of GroupB and vice versa
-    Interval.intervals = GroupA.priorities.List -> GroupB.priorities.List + GroupB.priorities.List -> GroupA.priorities.List
+    // Initially all members of Mentor are considered by all members of Mentee and vice versa
+    Interval.intervals = Mentor.priorities.List -> Mentee.priorities.List + Mentee.priorities.List -> Mentor.priorities.List
 }
 
 run { init } for exactly 4 Person, exactly 8 List
@@ -63,8 +63,8 @@ pred valid_match[m: Match] {
     // No one is matched to someone in the same group
     all p1: Person | 
         let p2 = m.pair[p1] |
-            (p1 in GroupA.priorities.List and p2 in GroupB.priorities.List) or
-            (p1 in GroupB.priorities.List and p2 in GroupA.priorities.List)
+            (p1 in Mentor.priorities.List and p2 in Mentee.priorities.List) or
+            (p1 in Mentee.priorities.List and p2 in Mentor.priorities.List)
 
      all l: List | some l.person
 }
@@ -79,8 +79,8 @@ pred stable_match[m: Match] {
   valid_match[m]
 
   no a, b: Person |
-    let aList = GroupA.priorities[a] + GroupB.priorities[a] |
-    let bList = GroupA.priorities[b] + GroupB.priorities[b] |
+    let aList = Mentor.priorities[a] + Mentee.priorities[a] |
+    let bList = Mentor.priorities[b] + Mentee.priorities[b] |
     let aMatch = m.pair[a] |
     let bMatch = m.pair[b] |
     let aNext = ^next[aList] |
@@ -100,10 +100,10 @@ pred stable_match[m: Match] {
 run {
     init
     some m: Match | stable_match[m]
-} for exactly 4 Person, exactly 8 List, exactly 1 Match
+} for exactly 6 Person, exactly 8 List, 1 Match
 
 fun rankOf[p: Person, m: Match]: Int {
-  let head = GroupA.priorities[p] + GroupB.priorities[p],
+  let head = Mentor.priorities[p] + Mentee.priorities[p],
       target = m.pair[p] |
   #({ l: List | l in head.^next and l.person = target })
 }
@@ -116,21 +116,22 @@ fun groupCost[G: Group, m: Match]: Int {
     sum p: G.priorities.List | rankOf[p, m]
 }
 
-// Minimising the sum pf total cost
+// Minimising the sum of total cost
 pred egalitarian[m1, m2: Match] {
     totalCost[m1] <= totalCost[m2]
 }
 
 // Minimize the absolute difference in total cost between groups
 pred groupEqual[m1, m2: Match] {
-    abs[groupCost[GroupA, m1] - groupCost[GroupB, m1]] <=
-    abs[groupCost[GroupA, m2] - groupCost[GroupB, m2]]
+    abs[groupCost[Mentor, m1] - groupCost[Mentee, m1]] <=
+    abs[groupCost[Mentor, m2] - groupCost[Mentee, m2]]
 }
 
 // Minimize the maximum total cost of any group
 pred balanced[m1, m2: Match] {
-    max[groupCost[GroupA, m1], groupCost[GroupB, m1]] <=
-    max[groupCost[GroupA, m2], groupCost[GroupB, m2]]
+    let m1GroupCosts = { groupCost[Mentor, m1] + groupCost[Mentee, m1] } |
+    let m2GroupCosts = { groupCost[Mentor, m2] + groupCost[Mentee, m2] } | 
+    max[m1GroupCosts] <= max[m2GroupCosts]
 }
 
 // Return the maximum individual regret (i.e. worst-case rank) among members of group G in matching m.
@@ -139,16 +140,61 @@ fun groupDegree[G: Group, m: Match]: Int {
     max[rs]
 }
 
+// Return maximum individual regret (i.e. worst-case rank) 
+fun maxDegree[m: Match]: Int {
+    let rs = { r: Int | all p: Person | r = rankOf[p, m] } | 
+    max[rs]
+}
+
 // Minimize the absolute difference between the worst-off agent in each group
 pred regretEqual[m1, m2: Match] {
-  abs[groupDegree[GroupA, m1] - groupDegree[GroupB, m1]] <=
-  abs[groupDegree[GroupA, m2] - groupDegree[GroupB, m2]]
+  abs[groupDegree[Mentor, m1] - groupDegree[Mentee, m1]] <=
+  abs[groupDegree[Mentor, m2] - groupDegree[Mentee, m2]]
+}
+
+// Minimize the the worst individual regret across all participants
+pred minRegret[m1, m2: Match] {
+  maxDegree[m1] <= maxDegree[m2]
 }
 
 
-NotGroupEqual: run {
+EgalitarianNotGroupEqual: run {
     init
     some m1, m2: Match |
         valid_match[m1] and valid_match[m2] and
         egalitarian[m1, m2] and not groupEqual[m1, m2]
-} for exactly 6 Person, exactly 8 List, 2 Match
+} for exactly 6 Person, exactly 10 List, 2 Match
+
+NotEgalitarianButGroupEqual: run {
+    init
+    some m1, m2: Match |
+        valid_match[m1] and valid_match[m2] and
+        groupEqual[m1, m2] and not egalitarian[m1, m2]
+} for exactly 6 Person, exactly 10 List, 2 Match
+
+NotBalancedButRegretEqual: run {
+    init
+    some m1, m2: Match |
+        valid_match[m1] and valid_match[m2] and
+        regretEqual[m1, m2] and not balanced[m1, m2]
+} for exactly 6 Person, exactly 10 List, 2 Match
+
+onlyEgalitarian: run {
+    init
+    some m1, m2: Match |
+        valid_match[m1] and valid_match[m2] and
+        egalitarian[m1, m2] and
+        not groupEqual[m1, m2] and
+        not balanced[m1, m2] and
+        not regretEqual[m1, m2]
+} for exactly 6 Person, exactly 10 List, 2 Match
+
+onlyRegretEqual: run {
+    init
+    some m1, m2: Match |
+        valid_match[m1] and valid_match[m2] and
+        not egalitarian[m1, m2] and
+        not groupEqual[m1, m2] and
+        not balanced[m1, m2] and
+        regretEqual[m1, m2]
+} for exactly 6 Person, exactly 10 List, 2 Match
