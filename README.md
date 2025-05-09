@@ -12,6 +12,10 @@ How should we understand an instance of your model and what your visualization s
 
 This model explores **stable matchings between Mentors and Mentees** using Forge, with a focus on evaluating fairness across multiple dimensions. It models preference lists, match structures, and fairness metrics, and provides experiments to reveal tradeoffs between them.
 
+## Video Demo Link
+
+[Watch the demo on Canva](https://www.canva.com/design/DAGm6cMctwU/Ony17Y-QIHgF_SmdqTL1oQ/edit?utm_content=DAGm6cMctwU&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton)
+
 ---
 
 ## Signatures
