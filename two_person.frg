@@ -39,9 +39,16 @@ pred init {
         l.person not in l.^next.person // No ranking includes the same person twice
         l in Person.(Group.priorities).*next // No dangling irrelevant lists
     }
+
+    -- Ensure at least one preference-list head is unique within its own group
+    all disj p1, p2: Person | (p1 in Mentor.priorities.List and p2 in Mentor.priorities.List) implies
+        (Mentor.priorities[p1]).person != (Mentor.priorities[p2]).person
+    
+    all disj q1, q2: Person | (q1 in Mentee.priorities.List and q2 in Mentee.priorities.List) implies
+        (Mentee.priorities[q1]).person != (Mentee.priorities[q2]).person
 }
 
-run { init } for exactly 4 Person, exactly 8 List
+run {init} for exactly 4 Person, 12 List, 1 Match
 
 pred valid_match[m: Match] {
     // No one is matched to themselves
@@ -61,13 +68,9 @@ pred valid_match[m: Match] {
             (p1 in Mentee.priorities.List and p2 in Mentor.priorities.List)
 
      all l: List | some l.person
+
+     all m: Match | some m.pair
 }
-
-run {
-    init
-    some m: Match | valid_match[m]
-} for exactly 4 Person, exactly 8 List, exactly 1 Match
-
 
 pred stable_match[m: Match] {
   valid_match[m]
@@ -96,6 +99,8 @@ StableMatch: run {
     some m: Match | stable_match[m]
 } for exactly 4 Person, exactly 8 List, 1 Match
 
+// ----- metrics ------
+
 fun rankOf[p: Person, m: Match]: Int {
   let head = Mentor.priorities[p] + Mentee.priorities[p],
       target = m.pair[p] |
@@ -110,62 +115,6 @@ fun groupCost[G: Group, m: Match]: Int {
     sum p: G.priorities.List | rankOf[p, m]
 }
 
-pred isEgalitarian[m: Match] {
-    let scores = { s: Int | all x: Match | s = totalCost[x]} |
-    totalCost[m] = min[scores]
-}
-
-pred isGroupEqual[m: Match]{
-  let scores = { s: Int | all x: Match | s = abs[groupCost[Mentor, x] - groupCost[Mentee, x]]} |
-    abs[groupCost[Mentor, m] - groupCost[Mentee, m]] = min[scores]
-}
-
-Egalitarian: run {
-    init
-    all x: Match | valid_match[x] and stable_match[x] 
-    some m: Match | isEgalitarian[m]
-} for exactly 6 Person, 12 List, 4 Match
-
-
-GroupEqual: run {
-    init
-    all x: Match | valid_match[x] and stable_match[x] 
-    some m: Match | isGroupEqual[m]
-} for exactly 6 Person, 12 List, 4 Match
-
-EgalitarianAndGroupEqual: run {
-    init
-    all x: Match | valid_match[x] and stable_match[x] 
-    some m: Match | isGroupEqual[m] and isEgalitarian[m]
-} for exactly 6 Person, 12 List, 4 Match
-
-/*
-// Minimising the sum of total cost
-pred egalitarian[m1, m2: Match] {
-    totalCost[m1] <= totalCost[m2]
-}
-
-// Minimize the absolute difference in total cost between groups
-pred groupEqual[m1, m2: Match] {
-    abs[groupCost[Mentor, m1] - groupCost[Mentee, m1]] <=
-    abs[groupCost[Mentor, m2] - groupCost[Mentee, m2]]
-}
-
-StableMatchAndGroupEqual: run {
-    init
-    some disj m1, m2: Match | 
-        stable_match[m1] and stable_match[m2] and
-        groupEqual[m1, m2]
-} for exactly 6 Person, exactly 12 List, 2 Match
-
-
-// Minimize the maximum total cost of any group
-pred balanced[m1, m2: Match] {
-    let m1GroupCosts = { groupCost[Mentor, m1] + groupCost[Mentee, m1] } |
-    let m2GroupCosts = { groupCost[Mentor, m2] + groupCost[Mentee, m2] } | 
-    max[m1GroupCosts] <= max[m2GroupCosts]
-}
-
 // Return the maximum individual regret (i.e. worst-case rank) among members of group G in matching m.
 fun groupDegree[G: Group, m: Match]: Int {
     let rs = { r: Int | all p: G.priorities.List | r = rankOf[p, m] } |
@@ -178,14 +127,62 @@ fun maxDegree[m: Match]: Int {
     max[rs]
 }
 
+// Minimising the sum of total cost
+pred isEgalitarian[m: Match] {
+    let scores = { s: Int | all x: Match | s = totalCost[x]} |
+    totalCost[m] = min[scores]
+}
+
+// Minimize the absolute difference in total cost between groups
+pred isGroupEqual[m: Match] {
+  let scores = { s: Int | all x: Match | s = abs[groupCost[Mentor, x] - groupCost[Mentee, x]]} |
+    abs[groupCost[Mentor, m] - groupCost[Mentee, m]] = min[scores]
+}
+
+// Minimize the maximum total cost of any group
+pred isBalanced[m: Match] {
+  let scores = { s: Int | all x: Match | s = max [{ groupCost[Mentor, x] + groupCost[Mentee, x] }]} |
+    max [{ groupCost[Mentor, m] + groupCost[Mentee, m] }] = min[scores]
+}
+
 // Minimize the absolute difference between the worst-off agent in each group
-pred regretEqual[m1, m2: Match] {
-  abs[groupDegree[Mentor, m1] - groupDegree[Mentee, m1]] <=
-  abs[groupDegree[Mentor, m2] - groupDegree[Mentee, m2]]
+pred isRegretEqual[m: Match] {
+  let scores = { s: Int | all x: Match | s = abs[groupDegree[Mentor, x] - groupDegree[Mentee, x]]} |
+    abs[groupDegree[Mentor, m] - groupDegree[Mentee, m]] = min[scores]
 }
 
 // Minimize the the worst individual regret across all participants
-pred minRegret[m1, m2: Match] {
-  maxDegree[m1] <= maxDegree[m2]
+pred isMinRegret[m: Match] {
+  let scores = { s: Int | all x: Match | s = maxDegree[x]} |
+    maxDegree[m] = min[scores]
 }
-*/
+
+Egalitarian: run {
+    init
+    all x: Match | stable_match[x] 
+    some m: Match | isEgalitarian[m]
+} for exactly 4 Person, exactly 8 List, 1 Match
+
+GroupEqual: run {
+    init
+    all x: Match | stable_match[x] 
+    some m: Match | isGroupEqual[m]
+} for exactly 4 Person, exactly 8 List, 1 Match
+
+RegretEqual: run {
+    init
+    all x: Match | stable_match[x]
+    some m: Match | isRegretEqual[m]
+} for exactly 4 Person, exactly 8 List, 1 Match
+
+Balanced: run {
+    init
+    all x: Match | stable_match[x]
+    some m: Match | isBalanced[m]
+} for exactly 4 Person, exactly 8 List, 1 Match
+
+MinRegret: run {
+    init
+    all x: Match | stable_match[x]
+    some m: Match | isMinRegret[m]
+} for exactly 4 Person, exactly 8 List, 1 Match

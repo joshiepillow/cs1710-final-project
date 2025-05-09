@@ -130,3 +130,20 @@ test suite for stable_match {
     } is necessary for all_stable_matches for exactly 4 Person, exactly 4 List, exactly 2 Match
 }
    
+test suite for metrics {
+-- 1. Egalitarian truly minimal total cost
+    assert {
+        init 
+        all m1, m2: Match |
+            isEgalitarian[m1] and valid_match[m1] and valid_match[m2] and
+            totalCost[m1] >= totalCost[m2]
+    } is unsat
+
+    assert {
+        init
+        all m1, m2: Match |
+            isGroupEqual[m1] and valid_match[m1] and valid_match[m2] and
+            abs[groupCost[Mentor, m1] - groupCost[Mentee, m1]] <=
+            abs[groupCost[Mentor, m2] - groupCost[Mentee, m2]]
+    } is sat
+}
